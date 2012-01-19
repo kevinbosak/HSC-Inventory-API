@@ -1,0 +1,9 @@
+This is a REST API for an inventory application built for Hackerspace Charlotte.
+
+This is implemented in PSGI/Plack.
+
+Run via plackup with:
+    plackup --port=80 -D bin/app.pl
+
+Or via Starman:
+    plackup -s Starman --port=80 -D bin/app.pl
