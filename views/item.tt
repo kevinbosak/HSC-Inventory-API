@@ -1,0 +1,66 @@
+<script type="text/javascript">
+var url_parts = window.location.pathname.split('/');
+var item_id = url_parts[url_parts.length-1];
+var field_order = [];
+var item_fields = {};
+
+$('document').ready(function() {
+    get_item_fields();
+
+    $.ajax({
+        url: '/api/items/' + item_id,
+        success: function(item) {
+            var html = [];
+            $('h1').html(item.name);
+            $('#header p').html(item.description);
+
+            $.each(field_order, function(i, field) {
+                var field_meta = item_fields[field];
+                if (field == 'name' || field == 'description') {
+                    return;
+                }
+                html.push('<dt>' + field_meta.pretty_name + ':</dt>');
+
+                var value;
+                if (item) {
+                    value = item[field];
+                }
+                if (value == undefined || value === null) {
+                    value = '';
+                }
+                html.push('<dd>' + value + '</dd>');
+
+            });
+            $('#item_detail').append(html.join(''));
+        }
+    });
+});
+
+function get_item_fields() {
+    $.ajax({
+        url: '/api/items/fields',
+        type: 'GET',
+        success: function(data) {
+            item_fields = data;
+            field_order = ['name', 'description']; // put these two first
+
+            $.each(item_fields, function(field, field_meta) {
+                if (field == 'name' || field == 'description' || field == 'inventory_id') {
+                    return;
+                }
+                field_order.push(field);
+            });
+        }
+    });
+}
+</script>
+
+<div id="header">
+    <h1></h1>
+    <p></p>
+</div>
+
+<div id="container">
+    <div id="item_detail">
+    </div>
+</div>

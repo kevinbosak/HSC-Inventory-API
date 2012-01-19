@@ -1,0 +1,44 @@
+body {
+    font-family: sans-serif;
+}
+#header {
+    text-align: center;
+}
+h3 {
+    text-align: center;
+}
+#container {
+    background: #CCC;
+    margin: 20px;
+    padding: 20px;
+}
+#container div, #container table {
+    margin-left: auto;
+    margin-right: auto;
+}
+#message {
+    background: gray;
+    color: yellow;
+    margin: 10px 0;
+    padding: 10px;
+    font-weight: bold;
+}
+label {
+    font-weight: bold;
+}
+#login_form {
+    border: 1px solid black;
+    padding: 5px;
+    background: white;
+    width: 50%;
+}
+#item_list table {
+    background: white;
+}
+table td, table th {
+    padding: 3px 5px;
+}
+dt {
+    font-weight: bold;
+    margin-top: 10px;
+}

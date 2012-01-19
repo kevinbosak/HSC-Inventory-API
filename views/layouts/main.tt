@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=<% settings.charset %>" />
+    <title>hsc_inventory</title>
+    <link rel="stylesheet" href="<% request.uri_base %>/css/style.css" />
+    <link rel="stylesheet" href="<% request.uri_base %>/css/jquery-ui.css" />
+
+    <script src="http://code.jquery.com/jquery-1.6.4.min.js" type="text/javascript"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js" type="text/javascript"></script>
+</head>
+
+<body>
+    <% content %>
+    <div id="footer">
+    </div>
+</body>
+</html>
