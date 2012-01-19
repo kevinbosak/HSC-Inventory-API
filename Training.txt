@@ -1,0 +1,15 @@
+Crash course in Dancer
+* Starman/PSGI/Plack
+* A simple Dancer app
+
+Intro to HSC Inventory project
+* Goal of project
+* Android app
+* Web app
+
+REST API
+* Create methods to checkin/checkout
+* Create methods to setup new accounts
+* Create admin page to authorize new account requests
+
+
