@@ -2,8 +2,32 @@ This is a REST API for an inventory application built for Hackerspace Charlotte.
 
 This is implemented in PSGI/Plack.
 
+Required Perl modules:
+   Plack
+   Starman
+   YAML
+   Dancer
+   Dancer::Plugin::DBIC
+   Template
+   Data::Validate::MySQL
+   Digest::SHA
+   MIME::Base64
+   JSON
+   SQL::Translator
+
+Setup database:
+    1. create a new mysql database
+        `mysqladmin -u root -p create hsc_inventory`
+    2. create a new mysql user
+        `mysql -u root -p hsc_inventory`
+        `GRANT ALL PRIVILEGES ON hsc_inventory.* to hsc_inventory;`
+    3. run build.pl
+        `perl build.pl`
+
 Run via plackup with:
     plackup --port=80 -D bin/app.pl
 
 Or via Starman:
     plackup -s Starman --port=80 -D bin/app.pl
+
+
