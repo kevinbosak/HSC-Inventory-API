@@ -5,6 +5,8 @@ use Dancer::Plugin::DBIC;
 use Data::Validate::MySQL qw(is_int is_date is_boolean is_varchar is_text is_enum);
 use Digest::SHA qw(sha256_hex);
 use MIME::Base64 qw(encode_base64url);
+use DateTime;
+use DateTime::Format::HTTP;
 
 our $VERSION = '0.1';
 
@@ -193,12 +195,12 @@ get '/items/fields' => sub {
         $return->{$col}->{pretty_name} = 'Created' if ($col eq 'c_time');
 
         $return->{$col}->{required} = $col_meta->{is_nullable} ? 0 : 1;
-        $return->{$col}->{not_editable} = 1 if $col eq 'c_time' || $col eq 'm_time' || $col eq 'inventory_id';
+        $return->{$col}->{not_editable} = 1 if $col eq 'c_time' || $col eq 'm_time' || $col eq 'inventory_id' || $col eq 'version';
     }
     return $return;
 };
 
-# gets item info based given an ID
+# gets item info based given an ID (also handles HEAD requests)
 get '/items/:item_id' => sub {
     my $id = params->{item_id};
 
@@ -206,12 +208,31 @@ get '/items/:item_id' => sub {
 
     my $schema = schema('hsc_inventory');
     my $item = $schema->resultset('Inventory')->find($id, {result_class => 'DBIx::Class::ResultClass::HashRefInflator'});
+    my $version = delete $item->{version};
+    my @datetime = split(/[\-\s:]/, $item->{m_time} || $item->{c_time});
+    my $dt = DateTime->new(
+        year      => $datetime[0],
+        month     => $datetime[1],
+        day       => $datetime[2],
+        hour      => $datetime[3],
+        minute    => $datetime[4],
+        second    => $datetime[5],
+        time_zone => 'UTC',
+    );
+    DateTime::Format::HTTP->format_datetime($dt);
 
-    status 201;
-    return $item if $item;
+    if ($item) {
+        status 201;
+        header 'Last-Modified'  => $last_modififed;
+        header 'ETag'           => $version;
+        header 'Content-Length' => length(to_json($item));
 
-    status 'not_found';
-    return "Item '$id' not found";
+        return request->is_head ? '' : $item;
+
+    } else {
+        status 'not_found';
+        return "Item '$id' not found";
+    }
 };
 
 # updates an item's info given the info and an ID
@@ -231,6 +252,10 @@ put '/items/:item_id' => sub {
 
     my $update_params = {};
     my $params = params;
+
+    delete $params->{version};
+    $update_params->{version} = $item->{version}+1;
+
     for my $col (keys %$params) {
         next if ($col eq 'c_time' || $col eq 'm_time' || $col eq 'item_id');
 

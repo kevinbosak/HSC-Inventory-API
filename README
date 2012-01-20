@@ -14,6 +14,7 @@ Required Perl modules:
    MIME::Base64
    JSON
    SQL::Translator
+   DateTime::Format::HTTP
 
 Setup database:
     1. create a new mysql database

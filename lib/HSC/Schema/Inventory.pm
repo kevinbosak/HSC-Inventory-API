@@ -17,6 +17,7 @@ __PACKAGE__->add_columns(
             'notes' => {data_type => 'TEXT', is_nullable => 1},
             'date_acquired' => {data_type => 'DATE', is_nullable => 1},
             'original_value' => {data_type => 'DECIMAL(10,7)', is_nullable => 1},
+            'version' => {data_type => 'INT UNSIGNED', default_value => 1, is_nullable => 0},
             'c_time' => {data_type => 'TIMESTAMP', is_nullable => 0, default_value => \'CURRENT_TIMESTAMP'},
             'm_time' => {data_type => 'DATETIME', is_nullable => 1},
 );
