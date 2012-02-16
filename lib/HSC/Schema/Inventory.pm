@@ -5,6 +5,7 @@ use base qw/DBIx::Class::Core/;
 __PACKAGE__->table('inventory');
 __PACKAGE__->add_columns(
             'inventory_id' => {data_type => 'INT UNSIGNED', is_auto_increment => 1, is_nullable => 0},
+#            'inventory_id' => {data_type => 'INT UNSIGNED', is_nullable => 0},
             'name' => { data_type => "VARCHAR", is_nullable => 0, size => 100 },
             'description' => {data_type => 'TEXT', is_nullable => 1},
             'location' => {data_type => 'VARCHAR', is_nullable => 1, size => 255},

@@ -7,6 +7,8 @@ use Digest::SHA qw(sha256_hex);
 use MIME::Base64 qw(encode_base64url);
 use DateTime;
 use DateTime::Format::HTTP;
+use Imager::QRCode;
+use UPC;
 
 our $VERSION = '0.1';
 
@@ -18,6 +20,11 @@ get '/' => sub {
     template 'index';
 };
 
+get '/mass' => sub {
+    my $schema = schema('hsc_inventory');
+    template 'mass';
+};
+
 get '/item/:item_id' => sub {
     my $schema = schema('hsc_inventory');
     template 'item';
@@ -27,6 +34,7 @@ before sub {
     # check auth token
     my $token = params->{token};
 
+    header 'Access-Control-Allow-Origin' => '*';
     return if request->method eq 'GET' || request->path eq '/api/get_token';
 
     my $schema = schema('hsc_inventory');
@@ -36,6 +44,9 @@ before sub {
         # TODO: use 403 if the user is logged in but not allowed to access a resource
         status 401;
         halt {error => 'This request requires a valid token'};
+    } else {
+        # store the user
+        var 'user' => $token_obj->user;
     }
 };
 
@@ -50,12 +61,12 @@ post '/get_token' => sub {
     if ($username && $pass) {
         my $schema = schema('hsc_inventory');
         my $password_hash = sha256_hex(config->{password_salt} . $pass),
-        my $user = $schema->resultset('User')->find($username);
+        my $user = $schema->resultset('User')->find({username => $username});
         if ($user && $user->password_hash eq $password_hash) {
             my $rand = int(rand(time)*100);
             my $token = encode_base64url($username . $rand);
             my $expire = config->{token_expire};
-            $schema->resultset('Token')->create({token => $token, expire_time => \"date_add(now(), INTERVAL $expire DAY)"});
+            $user->create_related('tokens', {token => $token, expire_time => \"date_add(now(), INTERVAL $expire DAY)"});
             return {token => $token};
         }
     }
@@ -74,6 +85,12 @@ get '/items' => sub {
     my $offset = params->{offset} || 0;
     debug("OFFSET: $offset");
 
+    my $search_params = {};
+    if (params->{search_terms}) {
+        # FIXME:
+#        $search_params->{} = ;
+    }
+
     # FIXME: validate sort field
     my $sort_by = params->{sort_by} || 'name';
 
@@ -89,8 +106,11 @@ get '/items' => sub {
     my $total = $schema->resultset('Inventory')->search({}, {
             sort_by => $sort_by,
         })->count;
+    for (@rows) {
+        $_->{uri} = config->{base_uri} . 'items/' . $_->{inventory_id};
+    }
 
-    return {total => $total, data => \@rows};
+    return {total => $total, items => \@rows};
 };
 
 # creates a new item and returns its ID
@@ -158,6 +178,7 @@ post '/items' => sub {
 
     my $item = $schema->resultset('Inventory')->create($create_params) or die "Could not create inventory";
     my $id = $item->inventory_id;
+    header 'Location' => uri_for("/api/items/$id");
 
     return {item_id => $id};
 };
@@ -204,8 +225,6 @@ get '/items/fields' => sub {
 get '/items/:item_id' => sub {
     my $id = params->{item_id};
 
-    return {error => 'Must specify an item_id'} unless $id;
-
     my $schema = schema('hsc_inventory');
     my $item = $schema->resultset('Inventory')->find($id, {result_class => 'DBIx::Class::ResultClass::HashRefInflator'});
     my $version = delete $item->{version};
@@ -219,11 +238,11 @@ get '/items/:item_id' => sub {
         second    => $datetime[5],
         time_zone => 'UTC',
     );
-    DateTime::Format::HTTP->format_datetime($dt);
+    my $last_modified = DateTime::Format::HTTP->format_datetime($dt);
 
     if ($item) {
         status 201;
-        header 'Last-Modified'  => $last_modififed;
+        header 'Last-Modified'  => $last_modified;
         header 'ETag'           => $version;
         header 'Content-Length' => length(to_json($item));
 
@@ -254,6 +273,7 @@ put '/items/:item_id' => sub {
     my $params = params;
 
     delete $params->{version};
+    $item->{version} ||= 0;
     $update_params->{version} = $item->{version}+1;
 
     for my $col (keys %$params) {
@@ -306,6 +326,54 @@ put '/items/:item_id' => sub {
     return {item_id => $id};
 };
 
+# check in/out items
+
+# checking out an item only returns success or error (for now)
+post '/items/:item_id/check_out' => sub {
+    my $user = var 'user';
+    my $schema = schema('hsc_inventory');
+    my $item = $schema->resultset('Inventory')->find(params->{item_id});
+    if (! $item->is_loanable) {
+        return {error => 'Item is not loanable!'};
+    }
+    if ($item->on_loan_to) {
+        return {error => 'Item is already loaned out!'};
+    }
+    my $return_date = params->{expected_return_date} || \'date_add(now(), INTERVAL 7 day)';
+    eval {
+    $item->update({
+            on_loan_to => $user->username,
+            expected_return_date => $return_date,
+        });
+    };
+    if ($@) {
+        return {error => 'There was an error checking out this item'};
+    } else {
+        return {success => 1};
+    }
+};
+
+# checking in an item also returns success or error
+post '/items/:item_id/check_in' => sub {
+    my $user = var 'user';
+    my $schema = schema('hsc_inventory');
+    my $item = $schema->resultset('Inventory')->find(params->{item_id});
+    if (! $item->is_loanable) {
+        return {error => 'Item is not loanable!'};
+    }
+    eval {
+    $item->update({
+            on_loan_to => undef,
+            expected_return_date => undef,
+        });
+    };
+    if ($@) {
+        return {error => 'There was an error checking in this item'};
+    } else {
+        return {success => 1};
+    }
+};
+
 del '/items/:item_id' => sub {
     my $id = params->{item_id};
     return {error => 'No item_id specified'} unless $id;
@@ -317,6 +385,58 @@ del '/items/:item_id' => sub {
 
     $item->delete() or die "Could not delete item";
     return {success => 1};
+};
+
+get '/scan/:item_id' => sub {
+    my $id = params->{item_id};
+    my $size = params->{size} || 4;
+
+    if (!$id) {
+        response->status(404);
+        return;
+    }
+
+    my $schema = schema('hsc_inventory');
+    my $item = $schema->resultset('Inventory')->find($id, {result_class => 'DBIx::Class::ResultClass::HashRefInflator'});
+
+    if ($item) {
+        # FIXME: long cache time
+        # FIXME: allow other image formats
+        my @datetime = split(/[\-\s:]/, $item->{c_time});
+        my $dt = DateTime->new(
+            year      => $datetime[0],
+            month     => $datetime[1],
+            day       => $datetime[2],
+            hour      => $datetime[3],
+            minute    => $datetime[4],
+            second    => $datetime[5],
+            time_zone => 'UTC',
+        );
+        my $last_modified = DateTime::Format::HTTP->format_datetime($dt);
+
+        my $image_data;
+        my $img;
+        if (params->{format} && lc(params->{format}) eq 'upc') {
+            $img = UPC::upc($id, $size);
+
+        } else {
+            my $qr = Imager::QRCode->new( size => $size, level => 'L');
+            $img = $qr->plot($id);
+        }
+        $img->write(data => \$image_data, type => 'png') or die;
+
+        header 'Content-Length' => length($image_data);
+
+        status 201;
+        header 'Last-Modified'  => $last_modified;
+        header 'Content-Type' => 'image/png';
+
+        return request->is_head ? '' : $image_data;
+
+    } else {
+        status 'not_found';
+        return "Item '$id' not found";
+    }
 };
 
 # FIXME: add OPTIONS routes to show available interactions for resources (in Allow header)

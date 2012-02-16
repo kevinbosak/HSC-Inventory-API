@@ -15,6 +15,7 @@ layout: "main"
 charset: "UTF-8"
 logger: file
 log: debug
+logdir: '/usr/local/www/hsc_inventory/logs'
 
 # template engine
 # simple: default and very basic template engine
@@ -24,6 +25,7 @@ template: "template_toolkit"
 
 password_salt: "fjk&da;325!qwkl;ejqk;"
 token_expire: 1
+base_uri: "http://hsc.bosak.net/api/"
 
 # template: "template_toolkit"
 # engines:
