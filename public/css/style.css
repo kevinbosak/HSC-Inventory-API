@@ -42,3 +42,35 @@ dt {
     font-weight: bold;
     margin-top: 10px;
 }
+
+#item_list ul {
+    display: block;
+    width: 250px;
+    height: 300px;
+}
+#item_list ul.pagination {
+    list-style: none;
+    height: auto;
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+}
+.pagination li {
+    list-style: none;
+    display: inline;
+    padding: 5px 10px;
+    margin: 0;
+}
+.pagination li a {
+    padding: 10px;
+    border: 1px solid black;
+    background: white;
+}
+.pagination li a:hover {
+    background: yellow;
+}
+#new_item {
+    text-align: center;
+    border-bottom: 1px solid black;
+    margin: 10px;
+}

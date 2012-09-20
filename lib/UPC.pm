@@ -35,7 +35,7 @@ sub upc {
     $temp *= 3;
     $temp += $_ for @digits[1,3,5,7,9];
     my $temp2 = $temp % 10;
-    $checksum = 10-$temp2;
+    $checksum = $temp2 ? 10-$temp2 : 0;
 
     my $left = $size * $whitespace;
     my $top = $size * $whitespace/2;
@@ -81,6 +81,9 @@ sub upc {
     # draw last five digits, checksum
     for my $digit (@digits[6..10], $checksum) {
         my $code = $CODES->{$digit};
+        if (!defined $code) {
+            die "Could not find code for $digit";
+        }
         for my $bit (split('', $code)) {
             if (!$bit) {
                 for (1..$size) {
